@@ -1,5 +1,7 @@
 package com.example.canvas.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.example.canvas.R
 import com.example.canvas.model.LuckyItem
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 @Composable
@@ -27,46 +30,41 @@ fun LuckyWheel(
     modifier: Modifier = Modifier,
     isRotationStarted:Boolean,
     items:List<LuckyItem>,
-    animationDuration:Long=10000L,
+    mRoundOfNumber:Int=4,
     target: Int=Random.nextInt(items.size),
-    smoothStopSpeed:Int=5,   // Increase or decrease this value to adjust the smooth stop rotation speed
-    rotationSpeed:Float=50f, // Increase or decrease this value to adjust the rotation speed
     onFinish:(LuckyItem)->Unit
 ) {
 
     val context = LocalContext.current
-    var startAngle = 0f
-    val tmpAngle = 0f
-    val sweepAngle = 360f / items.size
-    val sweepHalfAngle = (360f / items.size) / 2
-    val rotationAngleState = remember { mutableStateOf(0f) }
+    var startAngle = remember {
+        0f
+    }
+    val tmpAngle = remember {
+        0f
+    }
+    val sweepAngle = remember {
+        360f / items.size
+    }
+    val sweepHalfAngle = remember {
+        (360f / items.size) / 2
+    }
+    val rotationAngleState = remember { Animatable(0f) }
+
+    val bitmapList = remember {
+        items.map { getBitmapFromVectorDrawable(context,it.icon)}
+    }
+
 
 
     LaunchedEffect(isRotationStarted) {
-        //val randomNumber = Random.nextInt(colors.size)
         if (isRotationStarted) {
-            val startTime = System.currentTimeMillis()
-
-            while (true) {
-                val currentTime = System.currentTimeMillis()
-                val elapsedTime = currentTime - startTime
-
-                val progress = elapsedTime.toFloat() / animationDuration
-                val easedProgress = calculateSmoothStop(progress = progress, repetitions = smoothStopSpeed)
-                val rotationAngle =
-                    ((360f * rotationSpeed * easedProgress) % 360f) + 270 - (target * sweepAngle) - sweepHalfAngle
-
-                rotationAngleState.value = rotationAngle.toFloat()
-
-                if (progress >= 1f) {
-                    onFinish(items[target])
-                    break // Exit the loop after the animation duration is reached
-                }
-
-                delay(16) // Adjust the delay time as needed for the desired frame rate
+            launch {
+                val asd= (360f * mRoundOfNumber) + 270f - (sweepAngle*target) - 360f / items.size / 2
+                rotationAngleState.animateTo(asd, animationSpec = tween(durationMillis = (mRoundOfNumber * 1050 + 900L).toInt()))
+                onFinish(items[target])
             }
         } else {
-            rotationAngleState.value = 0f
+            rotationAngleState.snapTo(0f)
         }
     }
 
@@ -75,7 +73,8 @@ fun LuckyWheel(
 
         Canvas(
             modifier = Modifier
-                .fillMaxSize().padding(10.dp)
+                .fillMaxSize()
+                .padding(10.dp)
         ) {
             rotate(rotationAngleState.value) {
                 items.forEachIndexed { index, item ->
@@ -91,15 +90,11 @@ fun LuckyWheel(
                         startAngle = 0f
                     }
                     startAngle += sweepAngle
-
                     drawIntoCanvas {
                         drawImageInCanvas(
                             canvas = it,
                             tmpAngle = arcAngle,
-                            bitmap = getBitmapFromVectorDrawable(
-                                context,
-                                item.icon
-                            ).rotateBitmap(startAngle + 90 - sweepHalfAngle),
+                            bitmap = bitmapList[index].rotateBitmap(startAngle + 90 - sweepHalfAngle),
                             mRadius = size.width.toInt(),
                             mCenter = size.width.toInt() / 2,
                             listSize = items.size
