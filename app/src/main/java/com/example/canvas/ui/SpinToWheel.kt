@@ -1,5 +1,6 @@
 package com.example.canvas.ui
 
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -28,38 +29,40 @@ import kotlin.random.Random
 @Composable
 fun LuckyWheel(
     modifier: Modifier = Modifier,
-    isRotationStarted:Boolean,
+    isRotationStarted:()->Boolean,
     items:List<LuckyItem>,
-    mRoundOfNumber:Int=4,
+    mRoundOfNumber:Int=10,
     target: Int=Random.nextInt(items.size),
     onFinish:(LuckyItem)->Unit
 ) {
 
     val context = LocalContext.current
-    var startAngle = remember {
-        0f
+    val startAngle = remember {
+        mutableStateOf(0f)
     }
     val tmpAngle = remember {
-        0f
+        mutableStateOf(0f)
     }
     val sweepAngle = remember {
-        360f / items.size
+        mutableStateOf(360f / items.size)
+
     }
     val sweepHalfAngle = remember {
-        (360f / items.size) / 2
+        mutableStateOf((360f / items.size) / 2)
+
     }
     val rotationAngleState = remember { Animatable(0f) }
 
-    val bitmapList = remember {
+    val bitmapList = remember(items) {
         items.map { getBitmapFromVectorDrawable(context,it.icon)}
     }
 
 
 
-    LaunchedEffect(isRotationStarted) {
-        if (isRotationStarted) {
+    LaunchedEffect(isRotationStarted.invoke()) {
+        if (isRotationStarted.invoke()) {
             launch {
-                val asd= (360f * mRoundOfNumber) + 270f - (sweepAngle*target) - 360f / items.size / 2
+                val asd= (360f * mRoundOfNumber) + 270f - (sweepAngle.value*target) - 360f / items.size / 2
                 rotationAngleState.animateTo(asd, animationSpec = tween(durationMillis = (mRoundOfNumber * 1050 + 900L).toInt()))
                 onFinish(items[target])
             }
@@ -69,7 +72,6 @@ fun LuckyWheel(
     }
 
     Box(modifier = modifier) {
-        //Image(modifier=Modifier.align(Alignment.Center),imageVector = ImageVector.vectorResource(id = R.drawable.ic_body), contentDescription =null )
 
         Canvas(
             modifier = Modifier
@@ -77,24 +79,25 @@ fun LuckyWheel(
                 .padding(10.dp)
         ) {
             rotate(rotationAngleState.value) {
+
                 items.forEachIndexed { index, item ->
-                    val arcAngle = tmpAngle + (index * sweepAngle)
+                    val arcAngle = tmpAngle.value + (index * sweepAngle.value)
                     drawArc(
                         color = item.color,
                         startAngle = arcAngle,
-                        sweepAngle = sweepAngle,
+                        sweepAngle = sweepAngle.value,
                         useCenter = true,
                     )
 
-                    if (startAngle + sweepAngle > 360) {
-                        startAngle = 0f
+                    if (startAngle.value + sweepAngle.value > 360) {
+                        startAngle.value = 0f
                     }
-                    startAngle += sweepAngle
+                    startAngle.value += sweepAngle.value
                     drawIntoCanvas {
                         drawImageInCanvas(
                             canvas = it,
                             tmpAngle = arcAngle,
-                            bitmap = bitmapList[index].rotateBitmap(startAngle + 90 - sweepHalfAngle),
+                            bitmap = bitmapList[index].rotateBitmap(startAngle.value + 90 - sweepHalfAngle.value),
                             mRadius = size.width.toInt(),
                             mCenter = size.width.toInt() / 2,
                             listSize = items.size
@@ -106,15 +109,17 @@ fun LuckyWheel(
             }
         }
 
-
-        Image(
-            painterResource(id = R.drawable.red_arrow_down),
-            contentDescription = null,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-
-        )
-
+        ImagePointer(modifier = Modifier.align(Alignment.TopCenter))
 
     }
+}
+
+@Composable
+fun ImagePointer(modifier: Modifier){
+    Image(
+        painterResource(id = R.drawable.red_arrow_down),
+        contentDescription = null,
+        modifier =modifier
+
+    )
 }

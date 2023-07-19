@@ -1,5 +1,6 @@
 package com.example.canvas
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -45,7 +46,7 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-                ){
+                ) {
                     StepOne()
                 }
             }
@@ -123,19 +124,19 @@ fun StepOne() {
             ),
         )
     }
-    var isRotationStarted by remember { mutableStateOf(false) }
+
+    val isRotationStarted = remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize()) {
+
         LuckyWheel(
             modifier = Modifier
                 .size(348.dp)
                 .align(alignment = Alignment.Center),
-            isRotationStarted = isRotationStarted,
+            isRotationStarted = {isRotationStarted.value},
             items = myList
         ) {
             Toast.makeText(context, it.name, Toast.LENGTH_LONG).show()
         }
-
-
 
         Box(
             modifier = Modifier
@@ -144,7 +145,7 @@ fun StepOne() {
                 .background(color = Color.Yellow)
                 .align(alignment = Alignment.Center)
                 .clickable {
-                    isRotationStarted = !isRotationStarted
+                    isRotationStarted.value = !isRotationStarted.value
                 }
         ) {
 
@@ -156,6 +157,17 @@ fun StepOne() {
             )
         }
     }
+}
+
+@Composable
+fun MainView(
+    modifier: Modifier,
+    myList: List<LuckyItem>,
+    context: Context,
+    isRotationStarted: () -> Boolean
+) {
+
+
 
 }
 
@@ -167,8 +179,8 @@ fun StepOnePreview() {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
-        ){
-          StepOne()
+        ) {
+            StepOne()
         }
     }
 }
